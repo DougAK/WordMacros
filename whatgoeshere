@@ -1,0 +1,141 @@
+Sub PasteTextOnly()
+'
+' Paste Text Only Macro
+'
+'
+    Selection.PasteAndFormat (wdFormatPlainText)
+End Sub
+Sub OGCifyCommentBubblesDAKRMMEM()
+'
+' Convert DAK, RM, MEM comments to OGC
+' Note space after Richard Mallen, which is on purpose.
+'
+    ActiveDocument.RemovePersonalInformation = False
+    
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = "DAK" Then MyComment.Initial = "OGC"
+        If MyComment.Initial = "RM" Then MyComment.Initial = "OGC"
+        If MyComment.Initial = "MEM" Then MyComment.Initial = "OGC"
+        If MyComment.Author = "Douglas A. Klein" Then MyComment.Author = "OGC AdLaw"
+        If MyComment.Author = "Douglas Klein" Then MyComment.Author = "OGC AdLaw"
+        If MyComment.Author = "Richard Mallen " Then MyComment.Author = "OGC AdLaw"
+        If MyComment.Author = "Richard Mallen" Then MyComment.Author = "OGC AdLaw"
+        If MyComment.Author = "Marcus Maher" Then MyComment.Author = "OGC AdLaw"
+    Next
+End Sub
+
+Sub OGCifyCommentBubblesAuthor()
+'
+' Convert Author comment bubbles to OGC AdLaw ** Doug changed to just OGC on 5/7/15
+'
+'
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = "A" Then MyComment.Initial = "OGC"
+        If MyComment.Author = "Author" Then MyComment.Author = "OGC"
+    Next
+End Sub
+
+Sub OGCifyCommentBubblesPrompt()
+'
+' Convert comment bubbles matching input to OGC AdLaw
+'
+'
+    Dim inits As String
+    Dim fullname As String
+    inits = InputBox("Initials to change to OGC:", "")
+    fullname = InputBox("Full name to change to OGC AdLaw:", "")
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = inits Then MyComment.Initial = "OGC"
+        If MyComment.Author = fullname Then MyComment.Author = "OGC AdLaw"
+    Next
+End Sub
+Sub EditNameOnComment()
+' I got it working!
+'
+    inits = InputBox("What initials should appear in the selected comment(s)? ", "Initials", "OGC")
+    fullname = InputBox("What full name? ", "Full name", "OGC AdLaw")
+   ' The following didn't work; it changed all comments in the document, not just selected ones.
+   ' For Each MyComment In Selection.Comments
+   '     MyComment.Initial = inits
+   '     MyComment.Author = fullname
+   ' Next
+   ' This helped me figure out the following: http://www.medsciedit.com/change-author-comments-word-document/
+   
+     With Selection
+     For J = 1 To .Comments.Count
+     .Comments(J).Author = fullname
+     .Comments(J).Initial = inits
+     Next J
+     End With
+
+End Sub
+Sub DougTestMacro()
+'
+' This is where I learn how to program a macro
+'
+'
+Set doc = ActiveDocument
+    doc.TrackRevisions = False
+    For Each rev In doc.Revisions
+        If rev.Author = "Douglas Klein" Then MsgBox "found one!"
+        'rev.Author = "Dougie Fresh"
+        'This would work except that Author is a read-only property.
+        'But this means that it won't work and I need an entirely different approach.
+    Next
+    
+End Sub
+
+
+Sub CleanSelectedText()
+'
+' CleanSelectedText Macro
+' DAK found this at http://www.msofficeforums.com/word/9775-remove-bulk-reset-line-breaks.html
+' and modified it to work on only selected text, not whole document
+'
+'Turn Off Screen Updating
+Application.ScreenUpdating = False
+With Selection.Range.Find
+  .ClearFormatting
+  .Replacement.ClearFormatting
+  .Forward = True
+  .Wrap = wdFindStop
+  .Format = False
+  .MatchAllWordForms = False
+  .MatchSoundsLike = False
+  .MatchWildcards = True
+  'Replace single paragraph breaks with a space
+  .Text = "([!^13])([^13])([!^13])"
+  .Replacement.Text = "\1 \3"
+  'Replace all double spaces with single spaces
+  .Execute Replace:=wdReplaceAll
+  .Text = "[ ]{2,}"
+  .Replacement.Text = " "
+  'Delete hypens in hyphenated text formerly split across lines
+  .Execute Replace:=wdReplaceAll
+  .Text = "([a-z])-[ ]{1,}([a-z])"
+  .Replacement.Text = "\1\2"
+  .Execute Replace:=wdReplaceAll
+  'Limit paragraph breaks to one per 'real' paragraph.
+  .Text = "[^13]{1,}"
+  .Replacement.Text = "^p"
+  .Execute Replace:=wdReplaceAll
+End With
+'Restore Screen Updating
+Application.ScreenUpdating = True
+End Sub
+
+
+Sub StartEditing()
+'
+' StartEditing Macro
+'
+'
+    ' ActiveProtectedViewWindow.Edit  ' This caused an error when already open in edit view.
+    ActiveDocument.RemovePersonalInformation = False
+
+    With ActiveWindow.View.RevisionsFilter
+        .Markup = wdRevisionsMarkupAll
+        .View = wdRevisionsViewFinal
+    End With
+    ActiveDocument.TrackRevisions = True
+End Sub
