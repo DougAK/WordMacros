@@ -1,0 +1,263 @@
+' As of 5/13/2020, I think this is all of my macros. I looked back at GitHub and confirmed that they're all here.
+
+
+Sub OGCifyCommentBubblesAuthor()
+'
+' Convert Author comment bubbles to OGC
+'
+'
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = "A" Then MyComment.Initial = "OGC"
+        If MyComment.Author = "Author" Then MyComment.Author = "OGC"
+    Next
+    ActiveDocument.RemovePersonalInformation = False   ' so it doesn't turn them back into Author upon save
+
+End Sub
+
+Sub FCCifyCommentBubblesAuthor()
+'
+' Convert Author comment bubbles to FCC
+'
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = "A" Then MyComment.Initial = "FCC"
+        If MyComment.Author = "Author" Then MyComment.Author = "FCC"
+    Next
+    ActiveDocument.RemovePersonalInformation = False   ' so it doesn't turn them back into Author upon save
+
+End Sub
+
+
+Sub OGCifyCommentBubblesPrompt()
+'
+' Convert comment bubbles matching input to OGC AdLaw
+'
+'
+    Dim inits As String
+    Dim fullName As String
+    inits = InputBox("Initials to change to OGC:", "")
+    fullName = InputBox("Full name to change to OGC AdLaw:", "")
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = inits Then MyComment.Initial = "OGC"
+        If MyComment.Author = fullName Then MyComment.Author = "OGC AdLaw"
+    Next
+End Sub
+
+Sub EditNameOnSelectedComment()
+' I got it working!
+'
+    inits = InputBox("What initials should appear in the selected comment(s)? ", "Initials", "OGC")
+    fullName = InputBox("What full name? ", "Full name", "OGC AdLaw")
+   
+     With Selection
+     For J = 1 To .Comments.Count
+     .Comments(J).Author = fullName
+     .Comments(J).Initial = inits
+     Next J
+     End With
+
+End Sub
+
+Sub ChangeAuthorOnTrackedChangesAndComments()
+' Holy crap this works! Found the technique 11/29/19 at https://stackoverflow.com/questions/57867579/there-is-a-way-to-change-the-author-of-revisions-in-a-word-document
+' Doug added the code to turn off track changes and prompt for initials and fullName.
+' Bug: It makes responses to comments into regular comments. I wonder why.
+' Bug: It only works on edits and comments that have been saved. Interesting! (Or maybe not; check again.)
+   
+    Dim sWOOXML As String
+    Dim findAuthor As String
+    Dim replaceAuthor As String
+    Dim inits As String
+    Dim fullName As String
+    Dim saveTrackStatus As Boolean
+    Dim anotherPair As VbMsgBoxResult
+        
+    saveTrackStatus = ActiveDocument.TrackRevisions
+    ActiveDocument.TrackRevisions = False
+    
+ChangeAPair:
+    
+    inits = InputBox("Initials to change to OGC:", "")
+    fullName = InputBox("Full name to change to OGC:", "")
+
+    findAuthor = "w:author=" & Chr(34) & fullName & Chr(34)
+    replaceAuthor = "w:author=" & Chr(34) & "OGC" & Chr(34)
+    findInits = "w:initials=" & Chr(34) & inits & Chr(34)
+    replaceInits = "w:initials=" & Chr(34) & "OGC" & Chr(34)
+    sWOOXML = ActiveDocument.Content.WordOpenXML
+    If fullName <> "" Then sWOOXML = Replace(sWOOXML, findAuthor, replaceAuthor)
+    If inits <> "" Then sWOOXML = Replace(sWOOXML, findInits, replaceInits)
+    ActiveDocument.Content.InsertXML sWOOXML
+    
+    anotherPair = MsgBox("You just changed " + inits + " and " + fullName + " in both tracked changes and comments. Another pair?", vbYesNo)
+    If anotherPair = vbYes Then
+        GoTo ChangeAPair
+    Else
+        MsgBox ("Don't forget to save!")
+    End If
+    ActiveDocument.TrackRevisions = saveTrackStatus
+End Sub
+
+
+Sub EditNameOnComment()
+' I got it working!
+'
+    inits = InputBox("What initials should appear in the selected comment(s)? ", "Initials", "OGC")
+    fullName = InputBox("What full name? ", "Full name", "OGC AdLaw")
+  
+     With Selection
+     For J = 1 To .Comments.Count
+     .Comments(J).Author = fullName
+     .Comments(J).Initial = inits
+     Next J
+     End With
+
+End Sub
+
+Sub StartEditing()
+'
+' StartEditing Macro
+'
+'
+   
+    ActiveDocument.RemovePersonalInformation = False
+
+    With ActiveWindow.View.RevisionsFilter
+        .Markup = wdRevisionsMarkupAll
+        .View = wdRevisionsViewFinal
+    End With
+    ActiveDocument.TrackRevisions = True
+End Sub
+
+Public Sub JumpToParagraphNumber()
+'
+' DAK found this at http://windowssecrets.com/forums/showthread.php/135214-GoTo-a-specific-paragraph-number
+' I want a way to jump directly to a known paragraph number, just as I can jump to a page number.
+' I revised it so I don't have to type the trailing period. I also added the fail message.
+' I also assigned this macro to the key combo ctrl-alt-shift-J, which I highly recommend doing!
+
+   Dim strInputNum As String
+   Dim aPara As Paragraph
+   
+   strInputNum = InputBox("Type the paragraph number you want to jump to!", "Jump to Paragraph Number")
+   
+   For Each aPara In ActiveDocument.Paragraphs
+      If aPara.Range.ListFormat.ListString = (strInputNum + ".") Then
+         aPara.Range.Select
+         Exit Sub
+      End If
+   Next 'aPara
+   If MsgBox("There is no paragraph " + strInputNum + ", dummy!", vbRetryCancel, "YOU FAILED") = vbRetry Then
+    MsgBox ("I don't know how to do that yet.")
+    End If
+   
+End Sub
+
+Sub Anonymize()
+' Writing this from scratch on 10/11/2018 because I realized it's crazy to have to go through all of those steps just to strip names from a document.
+
+   ActiveDocument.RemoveDocumentInformation (wdRDIRemovePersonalInformation)
+   MsgBox ("Names will be removed the next time you save. If you did this by accident, run StartEditing before saving.")
+' I'm hoping that works without requiring a save. Wouldn't that be great?
+' Nope. It does the same thing as ActiveDocument.RemovePersonalInformation = True, I guess.
+' So after running this macro, it's a good idea to change the flag back (or run StartEditing()).
+
+End Sub
+
+Sub OGCifyCommentBubblesDAK_RM_DH_WR()
+'
+' Convert DAK, RM, DH, WR comments to OGC
+' Note space after Richard Mallen, which is on purpose because sometimes it's there.
+'
+    ActiveDocument.RemovePersonalInformation = False
+    
+    For Each MyComment In ActiveDocument.Comments
+        If MyComment.Initial = "DAK" Then MyComment.Initial = "OGC"
+        If MyComment.Initial = "DH" Then MyComment.Initial = "OGC"
+        If MyComment.Initial = "RM" Then MyComment.Initial = "OGC"
+        If MyComment.Initial = "DK" Then MyComment.Initial = "OGC"
+        If MyComment.Initial = "WR" Then MyComment.Initial = "OGC"
+        If MyComment.Author = "Douglas A. Klein" Then MyComment.Author = "OGC"
+        If MyComment.Author = "Douglas Klein" Then MyComment.Author = "OGC"
+        If MyComment.Author = "Richard Mallen " Then MyComment.Author = "OGC"
+        If MyComment.Author = "Richard Mallen" Then MyComment.Author = "OGC"
+        If MyComment.Author = "David Horowitz" Then MyComment.Author = "OGC"
+        If MyComment.Author = "William Richardson" Then MyComment.Author = "OGC"
+    Next
+End Sub
+
+Sub AddDHtoDAKcomments()
+'
+' Add "DH:  " to the beginning of a comment that Doug created
+' Help: https://msdn.microsoft.com/en-us/vba/word-vba/articles/comment-range-property-word
+' Future improvement: Check whether it already begins with DH:.    MyComment.Range(Start:=0, End:=3) <> "DH:" didn't work, but I found a way that does!
+'
+    For Each MyComment In ActiveDocument.Comments
+        If (MyComment.Initial = "DAK" Or MyComment.Initial = "DK") Then
+        MyComment.Range.InsertBefore "DH:  "                                 'first I add DH: to the beginning of the comment
+        Set dakRange = MyComment.Range                                       'then I see whether there are two of them; if so, I replace them with one
+          dakRange.Find.Execute FindText:="DH:  DH:", _
+          ReplaceWith:="DH:", Replace:=wdReplaceAll
+        End If
+    Next
+End Sub
+
+Sub AddTJtoTJcomments()
+    For Each MyComment In ActiveDocument.Comments
+        If (MyComment.Initial = "TJ") Then
+        MyComment.Range.InsertBefore "TJ:  "
+        End If
+    Next
+
+End Sub
+
+'Sub AddDHtoanycomment()   'This doesn't work!
+'    For Each MyComment In ActiveDocument.Comments
+'        If (MyComment.Range(Start:=0, End:=3) <> "DH:") Then MyComment.Range.InsertBefore "DH:  "
+'    Next
+'End Sub
+
+Sub PasteTextOnly()
+'
+' Paste Text Only Macro
+'
+'
+    Selection.PasteAndFormat (wdFormatPlainText)
+End Sub
+
+Sub CleanSelectedText()
+'
+' CleanSelectedText Macro
+' DAK found this at http://www.msofficeforums.com/word/9775-remove-bulk-reset-line-breaks.html
+' and modified it to work on only selected text, not whole document
+'
+'Turn Off Screen Updating
+Application.ScreenUpdating = False
+With Selection.Range.Find
+  .ClearFormatting
+  .Replacement.ClearFormatting
+  .Forward = True
+  .Wrap = wdFindStop
+  .Format = False
+  .MatchAllWordForms = False
+  .MatchSoundsLike = False
+  .MatchWildcards = True
+  'Replace single paragraph breaks with a space
+  .Text = "([!^13])([^13])([!^13])"
+  .Replacement.Text = "\1 \3"
+  'Replace all double spaces with single spaces
+  .Execute Replace:=wdReplaceAll
+  .Text = "[ ]{2,}"
+  .Replacement.Text = " "
+  'Delete hypens in hyphenated text formerly split across lines
+  .Execute Replace:=wdReplaceAll
+  .Text = "([a-z])-[ ]{1,}([a-z])"
+  .Replacement.Text = "\1\2"
+  .Execute Replace:=wdReplaceAll
+  'Limit paragraph breaks to one per 'real' paragraph.
+  .Text = "[^13]{1,}"
+  .Replacement.Text = "^p"
+  .Execute Replace:=wdReplaceAll
+End With
+'Restore Screen Updating
+Application.ScreenUpdating = True
+End Sub
